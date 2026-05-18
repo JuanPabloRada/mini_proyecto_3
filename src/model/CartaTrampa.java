@@ -1,7 +1,13 @@
+// Clase base para cartas trampa del juego
+// estas cartas se colocan y se activan cuando se cumple la condicion
+package model;
+
 public abstract class CartaTrampa extends Carta implements Activable {
 
+    // descripcion del efecto de la trampa
     private String descripcion;
-    private boolean activada; // empieza en false, pasa a true cuando ya fue usada
+    // si la trampa ya se activo o no
+    private boolean activada;
 
     public CartaTrampa(String nombre, String descripcion) {
         super(nombre);
@@ -9,15 +15,18 @@ public abstract class CartaTrampa extends Carta implements Activable {
         this.activada = false;
     }
 
-    // cada trampa define bajo que condicion puede activarse
+    // checa si la carta puede activarse en el momento actual
     public abstract boolean puedoActivarme(Contexto ctx);
 
-    // cada trampa define que efecto ejecuta al activarse
+    // efecto que ocurre cuando la carta se usa
     @Override
     public abstract void activar(Contexto ctx);
 
+    // devuelve la descripcion que muestra la carta en la UI
     public String getDescripcion() { return descripcion; }
+    // revisa si la trampa ya se ha activado antes
     public boolean isActivada()    { return activada; }
+    // marca la trampa como activada o no
     public void setActivada(boolean activada) { this.activada = activada; }
 
     @Override

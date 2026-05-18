@@ -1,13 +1,23 @@
+// Esta clase es el lugar donde se juega el duelo
+// controla quien ataca quien roba y como avanza el turno
+package model;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
 public class CampoBatalla {
+
+    // jugador 1 del duelo
     private Jugador jugador1;
+    // jugador 2 del duelo
     private Jugador jugador2;
+    // jugador que esta jugando ahora
     private Jugador jugadorActivo;
+    // indica si es el primer turno del juego
     private boolean esPrimerTurno = true;
+    // numero de turno actual
     private int turnoActual = 0;
 
     public CampoBatalla(Jugador jugador1, Jugador jugador2) {
@@ -15,35 +25,32 @@ public class CampoBatalla {
         this.jugador2 = jugador2;
     }
 
+    // arranca el duelo reparte cartas y elige quien comienza
     public void iniciarDuelo() {
         repartirCartasIniciales();
-        // randomiza quien empieza el duelo
         Random random = new Random();
         jugadorActivo = random.nextBoolean() ? jugador1 : jugador2;
     }
 
+    // reparte 25 cartas a cada jugador y les da mano inicial
     private void repartirCartasIniciales() {
-        // se llama a la fabrica una sola vez y se mezcla todo junto antes de repartir
         List<Carta> mazoCompleto = FabricaDeCartas.crearMazoCompleto();
         Collections.shuffle(mazoCompleto);
 
-        // se divide la lista ya mezclada en dos mitades, una para cada jugador
+        // dividir el mazo completo en dos mazos de 25 cartas cada uno
         List<Carta> mazo1 = new ArrayList<>(mazoCompleto.subList(0, 25));
         List<Carta> mazo2 = new ArrayList<>(mazoCompleto.subList(25, 50));
 
+        // llenar los mazos de los jugadores con las cartas asignadas
         jugador1.getMazo().agregarCartas(mazo1);
         jugador2.getMazo().agregarCartas(mazo2);
 
-        // se reparten 5 cartas iniciales a la mano de cada jugador
+        // dar la mano inicial de 5 cartas a cada jugador
         jugador1.getMano().addAll(jugador1.getMazo().repartir(5));
         jugador2.getMano().addAll(jugador2.getMazo().repartir(5));
     }
 
-    /**
-     * Prepara el turno del jugador activo (resetea flags, roba carta).
-     * La GUI llama a este metodo antes de habilitar acciones.
-     * Retorna un mensaje con lo que ocurrio al inicio del turno.
-     */
+    // prepara el turno actual roba carta o aplica primera regla del juego
     public String prepararTurno() {
         turnoActual++;
         jugadorActivo.resetTurno();
@@ -55,12 +62,11 @@ public class CampoBatalla {
         if (esPrimerTurno) {
             log.append("[Primer turno] ").append(jugadorActivo.getNombre())
                .append(" no roba carta y no puede atacar.\n");
-            // se marca cada monstruo en campo para que no pueda atacar en el primer turno
+            // en el primer turno los monstruos no pueden atacar
             for (CartaMonstruo m : jugadorActivo.getCampo()) {
                 m.marcarComoAtacado();
             }
         } else {
-            // si se queda sin cartas en el mazo al robar, pierde el duelo
             if (!jugadorActivo.tieneCartasEnMazo()) {
                 log.append(jugadorActivo.getNombre())
                    .append(" no tiene cartas en el mazo. ¡Pierde el duelo!\n");
@@ -69,7 +75,7 @@ public class CampoBatalla {
             jugadorActivo.robarCarta();
             log.append(jugadorActivo.getNombre()).append(" robó una carta.\n");
 
-            // al iniciar el turno se quitan los boosts temporales de las cartas magicas del turno anterior
+            // quitar mejoras temporales de los monstruos al iniciar el turno
             for (CartaMonstruo m : jugadorActivo.getCampo()) {
                 m.decrementarMejora();
             }
@@ -77,13 +83,13 @@ public class CampoBatalla {
         return log.toString();
     }
 
+    // cambia el jugador activo para terminar el turno
     public void terminarTurno() {
-        // cambia al otro jugador y marca que ya no es el primer turno
         jugadorActivo = (jugadorActivo == jugador1) ? jugador2 : jugador1;
         esPrimerTurno = false;
     }
 
-    // recibe las dos cartas involucradas y los dos jugadores para poder modificar sus campos y LP
+    // resuelve el combate entre un monstruo atacante y uno defensor
     public String resolverCombate(CartaMonstruo atacante, CartaMonstruo defensor,
                                    Jugador jugActivo, Jugador oponente) {
         StringBuilder log = new StringBuilder();
@@ -101,22 +107,17 @@ public class CampoBatalla {
                 log.append("¡Ataque bloqueado! La defensa de ").append(defensor.getNombre()).append(" es demasiado alta.\n");
             }
         } else {
-            // si el ATK del atacante es mayor, destruye al defensor y la diferencia va a los LP del oponente
             if (atkAtacante > defensor.getAtk()) {
                 int danio = atkAtacante - defensor.getAtk();
                 eliminarMonstruo(defensor, oponente);
                 oponente.recibirDanio(danio);
                 log.append(defensor.getNombre()).append(" destruido. ")
                    .append(oponente.getNombre()).append(" pierde ").append(danio).append(" LP.\n");
-
             } else if (atkAtacante == defensor.getAtk()) {
-                // si hay empate, los dos monstruos se destruyen y nadie recibe daño
                 eliminarMonstruo(defensor, oponente);
                 eliminarMonstruo(atacante, jugActivo);
                 log.append("¡Empate! Ambos monstruos fueron destruidos.\n");
-
             } else {
-                // si el atacante pierde, la diferencia de ATK se le descuenta a sus propios LP
                 int danio = defensor.getAtk() - atkAtacante;
                 jugActivo.recibirDanio(danio);
                 log.append(atacante.getNombre()).append(" fue repelido. ")
@@ -124,11 +125,11 @@ public class CampoBatalla {
             }
         }
 
-        // se marca el atacante para que no pueda volver a atacar este turno
         atacante.marcarComoAtacado();
         return log.toString();
     }
 
+    // ataca al jugador sin monstruos en campo
     public String ataqueDirecto(CartaMonstruo atacante, Jugador oponente) {
         oponente.recibirDanio(atacante.getAtk());
         atacante.marcarComoAtacado();
@@ -136,22 +137,21 @@ public class CampoBatalla {
                + "! Pierde " + atacante.getAtk() + " LP.\n";
     }
 
+    // da un boost de ataque al primer monstruo en el campo
+    // aplica boost de ataque al primer monstruo del jugador
     public void aplicarBoostAtk(Jugador j, short boost) {
-        if (!j.getCampo().isEmpty()) {
-            j.getCampo().get(0).aplicarBoostAtk(boost);
-        }
+        if (!j.getCampo().isEmpty()) j.getCampo().get(0).aplicarBoostAtk(boost);
     }
 
+    // aplica boost de defensa al primer monstruo del jugador
     public void aplicarBoostDef(Jugador j, short boost) {
-        if (!j.getCampo().isEmpty()) {
-            j.getCampo().get(0).aplicarBoostDef(boost);
-        }
+        if (!j.getCampo().isEmpty()) j.getCampo().get(0).aplicarBoostDef(boost);
     }
 
-    // busca el monstruo con menor ATK en el campo del oponente y lo destruye
     public void destruirMenorAtkOponente(Jugador jugActivo) {
         Jugador oponente = (jugActivo == jugador1) ? jugador2 : jugador1;
         if (oponente.getCampo().isEmpty()) return;
+        // buscar el monstruo mas debil en ataque del oponente
         CartaMonstruo menor = oponente.getCampo().get(0);
         for (CartaMonstruo m : oponente.getCampo()) {
             if (m.getAtk() < menor.getAtk()) menor = m;
@@ -163,6 +163,7 @@ public class CampoBatalla {
         j.getCampo().remove(m);
     }
 
+    // revisa si alguno de los jugadores ya perdio por LP o por no tener mazo
     public boolean hayGanador() {
         return jugador1.getLp() <= 0
             || jugador2.getLp() <= 0
@@ -170,6 +171,7 @@ public class CampoBatalla {
             || !jugador2.tieneCartasEnMazo();
     }
 
+    // devuelve quien gano el duelo segun las condiciones de victoria
     public Jugador getGanador() {
         if (jugador1.getLp() <= 0 || !jugador1.tieneCartasEnMazo()) return jugador2;
         if (jugador2.getLp() <= 0 || !jugador2.tieneCartasEnMazo()) return jugador1;
@@ -178,15 +180,13 @@ public class CampoBatalla {
 
     public Jugador getJugadorActivo() { return jugadorActivo; }
 
+    // devuelve el jugador que no esta activo ahora
     public Jugador getOponente() {
         return (jugadorActivo == jugador1) ? jugador2 : jugador1;
     }
 
-    public Jugador getJugador1() { return jugador1; }
-
-    public Jugador getJugador2() { return jugador2; }
-
-    public int getTurnoActual() { return turnoActual; }
-
-    public boolean isEsPrimerTurno() { return esPrimerTurno; }
+    public Jugador getJugador1()    { return jugador1; }
+    public Jugador getJugador2()    { return jugador2; }
+    public int getTurnoActual()     { return turnoActual; }
+    public boolean isEsPrimerTurno(){ return esPrimerTurno; }
 }

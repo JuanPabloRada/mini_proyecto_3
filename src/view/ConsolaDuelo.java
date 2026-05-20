@@ -4,48 +4,76 @@ import controller.DuelController;
 import model.*;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 
-/*ConsolaDuelo — Vista del duelo para modo TERMINAL.
+/*Acá no hay lógica del juego, solo mostrar y preguntar, todo lo que tiene que ver con reglas va en el controlador y el modelo.
  */
 public class ConsolaDuelo implements IDuelView {
+
+    // Cuántas veces le damos al jugador para que escriba algo válido
+    private static final int MAX_INTENTOS = 3;
+
+    // Si el nombre de un monstruo es muy largo lo cortamos para que no rompa la tabla
+    private static final int MAX_NOMBRE_MONSTRUO = 18;
 
     private final DuelController controller;
     private final Scanner scanner;
 
-    // Banderita para saber cuándo terminar el bucle de juego
+    // Cuando esto sea true, el bucle de juego para
     private boolean dueloTerminado = false;
 
-    
     public ConsolaDuelo(DuelController controller, Scanner scanner) {
         this.controller = controller;
         this.scanner    = scanner;
     }
 
-    
-    /*Inicia el duelo en modo consola.
-Llama a iniciarPrimerTurno() en el controlador y luego
- ejecuta el bucle de menú hasta que haya un ganador. */
-    public void iniciarJuego() {
-        controller.iniciarPrimerTurno();   // dibuja estado inicial
+    // ─── Inicio ──────────────────────────────────────────────────────────────
 
-        // Bucle principal de turnos
+    // Arranca el juego: muestra el banner, prepara el primer turno y entra al bucle
+    public void iniciarJuego() {
+        mostrarBannerDuelo();
+        controller.iniciarPrimerTurno();
+
         while (!dueloTerminado) {
             mostrarMenuTurno();
         }
     }
 
+    // Pequeño banner para que se vea bien al iniciar el duelo
+    private void mostrarBannerDuelo() {
+        CampoBatalla campo = controller.getCampo();
+        String n1 = campo.getJugadorActivo().getNombre();
+        String n2 = campo.getOponente().getNombre();
+
+        System.out.println();
+        System.out.println("  ╔══════════════════════════════════════════════╗");
+        System.out.println("  ║          ⚔  DUELO YU-GI-OH!  ⚔             ║");
+        System.out.println("  ╠══════════════════════════════════════════════╣");
+        System.out.printf( "  ║  %-20s  VS  %-17s║%n",
+            truncar(n1, 20), truncar(n2, 17));
+        System.out.println("  ║        \"Confía en el corazón de las cartas\"  ║");
+        System.out.println("  ╚══════════════════════════════════════════════╝");
+        System.out.println();
+    }
+
     
+    // Muestra las opciones del turno y ejecuta lo que elija el jugador
     private void mostrarMenuTurno() {
         if (dueloTerminado) return;
 
         CampoBatalla campo = controller.getCampo();
         Jugador activo = campo.getJugadorActivo();
 
+        // Mostramos los LP arriba del menú para que el jugador siempre los tenga a la vista
+        String lpInfo = String.format("LP: %d  |  Mano: %d  |  Mazo: %d",
+            activo.getLp(), activo.getMano().size(), activo.getMazo().tamano());
+
         System.out.println();
         System.out.println("┌────────────────────────────────────────┐");
         System.out.printf( "│  Turno %-3d  ─  %-26s│%n",
             campo.getTurnoActual(), activo.getNombre().toUpperCase());
+        System.out.printf( "│  %-38s│%n", lpInfo);
         System.out.println("├────────────────────────────────────────┤");
         System.out.println("│  1. Jugar Carta                        │");
         System.out.println("│  2. Atacar                             │");
@@ -56,12 +84,14 @@ Llama a iniciarPrimerTurno() en el controlador y luego
         System.out.println("└────────────────────────────────────────┘");
         System.out.print("  Opción: ");
 
-        String linea = scanner.nextLine().trim();
+        String linea = leerLinea();
+        if (linea == null) return;
+
         int opcion;
         try {
             opcion = Integer.parseInt(linea);
         } catch (NumberFormatException e) {
-            System.out.println("  [!] Opción no válida, intenta de nuevo.");
+            System.out.println("  [!] Eso no es un número, intenta de nuevo.");
             return;
         }
 
@@ -70,23 +100,23 @@ Llama a iniciarPrimerTurno() en el controlador y luego
             case 2 -> controller.accionAtacar();
             case 3 -> controller.accionActivarTrampa();
             case 4 -> controller.accionCambiarPosicion();
-            case 5 -> actualizarUI();   // muestra el estado sin consumir turno
+            case 5 -> actualizarUI();
             case 6 -> controller.accionTerminarTurno();
-            default -> System.out.println("  [!] Opción no válida.");
+            default -> System.out.println("  [!] Opción fuera de rango (1-6), intenta de nuevo.");
         }
     }
 
-   
+    
+    // Muestra un evento del juego en consola (equivale al log de texto de la GUI)
     @Override
     public void agregarLog(String texto) {
         if (texto == null || texto.isBlank()) return;
-        // Imprimir línea a línea para respetar los saltos del modelo
         for (String linea : texto.split("\n")) {
             if (!linea.isBlank()) System.out.println("  [>>] " + linea.trim());
         }
     }
 
-   
+    // Imprime el estado actual del campo de ambos jugadores
     @Override
     public void actualizarUI() {
         CampoBatalla campo = controller.getCampo();
@@ -101,7 +131,7 @@ Llama a iniciarPrimerTurno() en el controlador y luego
         System.out.println("  ╚══════════════════════════════════════════════╝");
     }
 
-    /* Imprime una fila del estado de un jugador de forma compacta. */
+    // Una fila del estado: nombre, LP, mano, mazo, trampas y monstruos en campo
     private void imprimirEstadoJugador(String etiqueta, Jugador j, String extra) {
         System.out.printf("  ║ %s %s%s%n", etiqueta, j.getNombre(), extra);
         System.out.printf("  ║   LP: %-5d  Mano: %d  Mazo: %d  Trampas: %d%n",
@@ -112,13 +142,13 @@ Llama a iniciarPrimerTurno() en el controlador y luego
         System.out.println("  ║   Campo: " + describirCampo(j.getCampo()));
     }
 
-    /* Convierte la lista de monstruos en una cadena legible de texto. */
+    // Convierte los monstruos del campo en texto legible
     private String describirCampo(List<CartaMonstruo> monstruos) {
         if (monstruos.isEmpty()) return "(vacío)";
         StringBuilder sb = new StringBuilder();
         for (CartaMonstruo m : monstruos) {
             sb.append("[")
-              .append(m.getNombre())
+              .append(truncar(m.getNombre(), MAX_NOMBRE_MONSTRUO))
               .append(" ATK:").append(m.getAtk())
               .append("/DEF:").append(m.getDef())
               .append(" ").append(m.estaEnModoDefensa() ? "DEF" : "ATK")
@@ -127,17 +157,15 @@ Llama a iniciarPrimerTurno() en el controlador y luego
         }
         return sb.toString().trim();
     }
-    /*
- Imprime la pantalla de ganador y marca el duelo como terminado
-      para que el bucle en iniciarJuego() finalice.
-     */
+
+    // Muestra quién ganó y frena el bucle del juego
     @Override
     public void mostrarGanador() {
-        dueloTerminado = true;   // detiene el bucle principal
+        dueloTerminado = true;
         Jugador ganador = controller.getCampo().getGanador();
         String nombre = (ganador != null) ? ganador.getNombre() : "Nadie";
 
-        actualizarUI();   // mostrar estado final antes del anuncio
+        actualizarUI();
         System.out.println();
         System.out.println("  ╔══════════════════════════════════════════════╗");
         System.out.println("  ║            ¡¡ DUELO TERMINADO !!            ║");
@@ -147,12 +175,10 @@ Llama a iniciarPrimerTurno() en el controlador y luego
         System.out.println("  ╚══════════════════════════════════════════════╝");
     }
 
-    
     @Override
     public int pedirSeleccion(String titulo, String mensaje, String[] opciones) {
         System.out.println();
         System.out.println("  ── " + titulo + " ──");
-        // Imprimir el mensaje respetando saltos de línea
         for (String linea : mensaje.split("\n")) {
             System.out.println("  " + linea);
         }
@@ -160,28 +186,39 @@ Llama a iniciarPrimerTurno() en el controlador y luego
         for (int i = 0; i < opciones.length; i++) {
             System.out.printf("  [%d] %s%n", i + 1, opciones[i]);
         }
-        System.out.print("  Elige (1-" + opciones.length + ", 0=cancelar): ");
 
-        String linea = scanner.nextLine().trim();
-        int eleccion;
-        try {
-            eleccion = Integer.parseInt(linea);
-        } catch (NumberFormatException e) {
-            System.out.println("  [!] Entrada no válida. Acción cancelada.");
-            return -1;
+        int intentos = 0;
+        while (intentos < MAX_INTENTOS) {
+            System.out.print("  Elige (1-" + opciones.length + ", 0=cancelar): ");
+
+            // leerLinea() es la única parte con manejo especial — ver método abajo
+            String linea = leerLinea();
+            if (linea == null) return -1;
+
+            int eleccion;
+            try {
+                eleccion = Integer.parseInt(linea);
+            } catch (NumberFormatException e) {
+                intentos++;
+                System.out.println("  [!] Eso no es un número. Intento " + intentos + " de " + MAX_INTENTOS + ".");
+                continue;
+            }
+
+            if (eleccion == 0) return -1;
+
+            if (eleccion >= 1 && eleccion <= opciones.length) {
+                return eleccion - 1;
+            }
+
+            intentos++;
+            System.out.println("  [!] Número fuera de rango. Intento " + intentos + " de " + MAX_INTENTOS + ".");
         }
 
-        if (eleccion == 0) return -1;                    // cancelación explícita
-        if (eleccion < 1 || eleccion > opciones.length) {
-            System.out.println("  [!] Número fuera de rango. Acción cancelada.");
-            return -1;
-        }
-        return eleccion - 1;   /
+        System.out.println("  [!] Demasiados intentos, se cancela la acción.");
+        return -1;
     }
 
-    /*espera que el jugador presione ENTER.
-    para anunciar el cambio de turno entre jugadores que comparten el mismo teclado.
-     */
+    // Muestra un aviso y espera que el jugador presione ENTER para seguir
     @Override
     public void mostrarMensaje(String titulo, String mensaje) {
         System.out.println();
@@ -191,6 +228,23 @@ Llama a iniciarPrimerTurno() en el controlador y luego
         }
         System.out.println("  └───────────────────────────────────────────────");
         System.out.print("  (Presione ENTER para continuar...) ");
-        scanner.nextLine();
+        leerLinea();
+    }
+
+    
+    private String leerLinea() {
+        try {
+            return scanner.nextLine().trim();
+        } catch (NoSuchElementException | IllegalStateException e) {
+            System.out.println("\n  [!] Se cerró la entrada. Terminando juego...");
+            dueloTerminado = true;
+            return null;
+        }
+    }
+
+    // Corta el texto si es muy largo y le pone "…" al final
+    private String truncar(String texto, int max) {
+        if (texto.length() <= max) return texto;
+        return texto.substring(0, max - 1) + "…";
     }
 }

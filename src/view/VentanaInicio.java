@@ -6,52 +6,34 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
 
-/**
- * VentanaInicio: pantalla inicial de la aplicación.
- *
- * Responsabilidad:
- * - Construir la interfaz gráfica para solicitar los nombres de los dos jugadores.
- * - Recolectar los nombres y delegar la acción de iniciar el duelo al
- *   `InicioController` para que inicialice el modelo y la vista del duelo.
- *
- * Notas de diseño:
- * - Esta clase solo se encarga de la vista (UI). No contiene lógica del juego.
- * - Se utiliza `GridBagLayout` para disponer los controles de forma flexible.
- */
+
 public class VentanaInicio extends JFrame {
 
-    // Campos de entrada para los nombres de los jugadores.
-    // Son componentes Swing que contienen texto editable.
+
     private JTextField campoNombre1;
     private JTextField campoNombre2;
 
-    // Controller que maneja las acciones (patron MVC).
-    // La vista delega eventos (como "iniciar duelo") a este controller.
+
     private InicioController controller;
 
     public VentanaInicio() {
-        // Crear el controller y construir la interfaz.
-        // El controller recibe esta vista para poder llamarla cuando sea necesario.
+
         controller = new InicioController(this);
         construirUI();
     }
 
     private void construirUI() {
-        // Configuracion basica de la ventana
+      
         setTitle("Yu-Gi-Oh! — Duelo");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
 
-        // Panel principal que contendra todos los controles. Usamos GridBagLayout porque necesitamos una rejilla flexible con celdas que puedan
-        // expandirse y alinearse correctamente.
         JPanel panel = new JPanel(new GridBagLayout());
         // Fondo oscuro para separacion.
         panel.setBackground(new Color(15, 15, 40));
         panel.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
 
-        // Configuracion compartida para las celdas del GridBagLayout.
-        // `insets` define el espacio alrededor de cada componente.
-        // `fill = HORIZONTAL` permite que los componentes se estiren horizontalmente.
+        
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 8, 8, 8);
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -60,8 +42,8 @@ public class VentanaInicio extends JFrame {
        
         JLabel titulo = new JLabel("  DUELO DE YU-GI-OH!  ", SwingConstants.CENTER);
         titulo.setFont(new Font("Serif", Font.BOLD, 26));
-        titulo.setForeground(new Color(255, 215, 0)); // color dorado
-        // `gridwidth = 2` hace que el título ocupe las dos columnas de la rejilla.
+        titulo.setForeground(new Color(255, 215, 0)); 
+        
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
         panel.add(titulo, gbc);
 
@@ -72,7 +54,7 @@ public class VentanaInicio extends JFrame {
         gbc.gridy = 1;
         panel.add(subtitulo, gbc);
 
-        // Separador visual dorado para separar el encabezado del formulario.
+        
         JSeparator sep = new JSeparator();
         sep.setForeground(new Color(255, 215, 0));
         gbc.gridy = 2; gbc.insets = new Insets(4, 0, 16, 0);
@@ -80,15 +62,14 @@ public class VentanaInicio extends JFrame {
         // Restaurar los insets por defecto para las siguientes filas.
         gbc.insets = new Insets(8, 8, 8, 8);
 
-        // Fila: Jugador 1 
-        // Etiqueta junto al campo de texto para el nombre del jugador 1.
+        
         gbc.gridwidth = 1; gbc.gridy = 3; gbc.gridx = 0;
         JLabel lbl1 = new JLabel("Jugador 1:");
         lbl1.setForeground(Color.WHITE);
         lbl1.setFont(new Font("SansSerif", Font.BOLD, 14));
         panel.add(lbl1, gbc);
 
-        // Campo de texto con valor por defecto "Yugi" y ancho aproximado de 16 columnas.
+        
         campoNombre1 = new JTextField("Yugi", 16);
         estilizarCampo(campoNombre1); // aplica estilo consistente a los campos
         gbc.gridx = 1;
@@ -107,8 +88,7 @@ public class VentanaInicio extends JFrame {
         gbc.gridx = 1;
         panel.add(campoNombre2, gbc);
 
-        //  Boton principal para iniciar el duelo 
-        // Se estiliza manualmente para mantener el tema visual.
+    
         JButton btnIniciar = new JButton("¡INICIAR DUELO!");
         btnIniciar.setFont(new Font("SansSerif", Font.BOLD, 15));
         btnIniciar.setBackground(new Color(180, 0, 0));
@@ -147,8 +127,7 @@ public class VentanaInicio extends JFrame {
     }
 
     private void iniciarDuelo() {
-        // Recoger los nombres, eliminar espacios alrededor y delegar al controller.
-        // El controller validara/creara los jugadores y abrira la VentanaDuelo.
+        
         String n1 = campoNombre1.getText().trim();
         String n2 = campoNombre2.getText().trim();
         controller.iniciarDuelo(n1, n2);

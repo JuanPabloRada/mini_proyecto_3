@@ -50,7 +50,7 @@ public class DuelController {
         opciones[mano.size()] = "Cancelar";
 
         int idx = vista.pedirSeleccion(
-            "🃏 Tu mano — " + activo.getNombre(),
+            " Tu mano — " + activo.getNombre(),
             "Elige una carta para jugar:",
             opciones);
 
